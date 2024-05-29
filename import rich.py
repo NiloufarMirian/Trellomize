@@ -7,8 +7,11 @@ from rich.panel import Panel
 from datetime import datetime, timedelta
 import uuid
 import json
-import logging
+import loguru
 from cryptography.fernet import Fernet
+import pandas as pd
+
+
 
 key = b"5GPIG0S9hs8AZ7ePycgywCN24ZItBTvqBcU3QAzCEqg="
 cipher = Fernet(key)
@@ -31,11 +34,13 @@ class Project:
             self.users.append(user)
         else:
             rprint(f"User {user} is already in the project.")
+            logger.info(f"User {user} is already in the project.")
 
     def remove_user(self, user):
         if user in self.users:
             self.users.remove(user)
             rprint(f"User {user} removed.")
+            logger.error(f"User {user} removed.")
         else:
             rprint(f"User {user} is not in the project.")
 
@@ -56,6 +61,7 @@ class Project:
         project.users = data['users']
         return project
     
+
 class Task:
     def __init__(self,id, project, title, desc, start, end):
         self.id = id
@@ -80,17 +86,21 @@ class Task:
         if (user in project.users):
             if(user in self.users):
                 rprint("this user is currently assigned to this task")
+                logger.info("this user is currently assigned to this task")
             else:
                 self.users.append(user)
                 rprint(f"User {user} added")
+                logger.info(f"User {user} added")
 
     def remove_user(self, user):
         if (user in self.users):
             if(user in users):
                 self.users.remove(user)
                 rprint(f"User {user} removed")
+                logger.error(f"User {user} removed")
             else:
                 rprint(f"User {user} is not in the task.")
+                logger.error(f"User {user} is not in the task.")
 
     def add_comment(self,comment):
         self.comment = comment
@@ -131,6 +141,7 @@ class Task:
     
         return task
     
+
 def encrypt_password(password):
     encrypted_password = cipher.encrypt(password.encode())
     return encrypted_password.decode()
@@ -163,7 +174,10 @@ def load_data(filename='data.json'):
     except FileNotFoundError:
         # If the file doesn't exist, return empty data structures
         return {}, [], []
+
+
 users, projects, tasks = load_data()
+
 
 def show_menu():
     rprint(Panel(Text("Welcome to the User Management System.\nMENU:",'purple', justify='left')))
@@ -189,19 +203,24 @@ def is_username_used(username):
 def register_user(username, email, password):
     if not is_valid_email(email):
         rprint("Invalid email format.")
+        logger.error("Invalid email format.")
         return False
     if not is_valid_username(username):
         rprint("Invalid username. It must be alphanumeric and between 3 and 20 characters.")
+        logger.error("Invalid username. It must be alphanumeric and between 3 and 20 characters.")
         return False
     if is_email_used(email):
         rprint("Email is already used.")
+        logger.info("Email is already used.")
         return False
     if is_username_used(username):
         rprint("Username is already taken.")
+        logger.info("Username is already taken.")
         return False
 
     users[username] = {'email': email, 'password': password , "active":True}
     rprint(f"User {username} registered successfully.")
+    logger.info(f"User {username} registered successfully.")
     return True
 
 def reg():
@@ -213,8 +232,10 @@ def reg():
 
         if register_user(username, email, password):
             rprint("Registration successful.")
+            logger.info("Registration successful.")
         else:
             rprint("Registration failed. Please try again.")
+            logger.error("Registration failed. Please try again.")
 
         
         break
@@ -222,22 +243,28 @@ def reg():
 def login_user(username, password):
     if not is_username_used(username):
         rprint("Username does not exist.")
+        logger.error("Username does not exist.")
         return False
 
     if users[username]["active"] == False:
         rprint("This account has been deactivated")
+        logger.error("This account has been deactivated")
 
     if users[username]['password'] == password:
         rprint(f"User {username} logged in successfully.")
+        logger.info(f"User {username} logged in successfully.")
         return True
     else:
         rprint("Incorrect password.")
+        logger.error("Incorrect password.")
         return False
     
+
 def create_project(username):
     title = input("Enter your project's title: ")
     id = uuid.uuid4()
     rprint("Project created")
+    logger.info("Project created")
     return Project(id,title,username)
 
 def create_task(pid):
@@ -247,6 +274,7 @@ def create_task(pid):
     start = datetime.now()
     end = start + timedelta(hours=24)
     rprint("Task created")
+    logger.info("Task created")
     return  Task(id, pid, name,desc,start,end)
     
 def  edit_task(task , project):
@@ -269,6 +297,7 @@ def  edit_task(task , project):
             temp = temp + ": user added"
             task.logs.append(temp)
             rprint("user added")
+            logger.info("user added")
 
         if choice == "2":
             userr = input("enter username: ")
@@ -278,6 +307,7 @@ def  edit_task(task , project):
             temp = temp + ": user removed"
             task.logs.append(temp)
             rprint("user removed")
+            logger.error("user removed")
 
         if choice == "3":
             while True:
@@ -305,6 +335,7 @@ def  edit_task(task , project):
                     break
                 else:
                     rprint("wrong input")
+                    logger.error("wrong input")
 
         
         if choice == "4":
@@ -336,6 +367,7 @@ def  edit_task(task , project):
                     break
                 else:
                     rprint("wrong input")
+                    logger.error("wrong input")
 
         if choice == "5":
             comment = input("Enter your comment: ")
@@ -345,6 +377,7 @@ def  edit_task(task , project):
             temp = temp + ": comment added"
             task.logs.append(temp)
             rprint("comment added")
+            logger.info("comment added")
 
         if choice == "6":
             break
@@ -371,6 +404,7 @@ def manage_task(project):
                     j += 1
             if (j == 1):
                 rprint("there is no tasks")
+                logger.error("there is no tasks")
                 continue
             
             choice = input("Select task: ")
@@ -379,11 +413,13 @@ def manage_task(project):
                 edit_task(tasks[taskss[choice -1]], project)
             else:
                 rprint("wrong input")
+                logger.error("wrong input")
 
 
 
         if choice == "3":
             break
+
 
 def manage_project(username):
     
@@ -396,6 +432,7 @@ def manage_project(username):
             ids.append(x)
     if (i == 1):
         print("there is no projects")
+        logger.error("there is no projects")
         return False
             
     
@@ -404,6 +441,7 @@ def manage_project(username):
         choice = int(choice)
         if choice < 1 or choice > len(ids):
             rprint("wrong input")
+            logger.error("wrong input")
         else:
             id= ids[choice-1]
             break
@@ -420,8 +458,10 @@ def manage_project(username):
             if (user in users):
                 projects[id].add_user(user)
                 rprint("User added successfully") 
+                logger.info("User added successfully")
             else:
                 rprint(f"User {user} not found.")
+                logger.error(f"User {user} not found.")
 
         if choice == "2":
             user = input("Enter the username you want to remove: ")
@@ -459,8 +499,52 @@ def view_task_details(task):
     rprint(f"Logs: {', '.join(task.logs)}")
     rprint(f"Comments: {task.comment}")
 
-    if input("Do you want to edit this task? (y/n): ").lower() == 'y':
-        edit_task(task)
+    Backlog = []
+    for task in tasks:
+        if task.status == 'Backlog':
+            Backlog.append(task.id)
+
+    Todo = []     
+    for task in tasks:
+        if task.status  == 'Todo':
+            Todo.append(task.id)
+
+    Doing = []       
+    for task in tasks:
+        if task.status == 'Doing':
+            Doing.append(task.id)
+
+    Done = []    
+    for task in tasks:
+        if task.status == 'Done':
+            Done.append(task.id)    
+
+    Archived = []   
+    for task in tasks:
+        if task.status == 'Archived':
+            Archived.append(task.id)     
+
+def display_tasks_by_status(tasks, status):
+    table = Table(title=f"Task table")
+    table.add_column("Backlog", style="cyan")
+    table.add_column("Todo", style="magenta")
+    table.add_column("Doing", style="magenta")
+    table.add_column("Done", style="green")
+    table.add_column("Archived", style="green")
+
+    Backlog = '\n'.join(Backlog)   
+    TODO = '\n'.join(TODO)
+    DOING = '\n'.join(DOING)
+    DONE = '\n'.join(DONE)
+    Archived = '\n'.join(Archived)
+
+    table.add_row(Backlog, TODO, DOING, DONE, Archived)
+
+logger = logging.getLogger()
+logger.error("wrong input")
+
+if input("Do you want to edit this task? (y/n): ").lower() == 'y':
+        edit_task(Task)
 
 def manage_project_tasks(project, tasks):
     while True:
@@ -470,7 +554,6 @@ def manage_project_tasks(project, tasks):
         rprint("3. Display DONE Tasks")
         rprint("4. View Task Details")
         rprint("5. Exit")
-
         choice = input("Enter your choice (1-5): ")
 
         if choice == "1":
@@ -489,6 +572,7 @@ def manage_project_tasks(project, tasks):
                 view_task_details(task)
             else:
                 rprint("Task not found.")
+                logger.error("Task not found.")
                 
         elif choice == "5":
             break
@@ -504,12 +588,14 @@ def joined_project(username):
             ids.append(x)
     if (i == 1):
         print("there is no projects")
+        logger.error("there is no projects")
         return False
     while True:
         choice = input("Select: ")
         choice = int(choice)
         if choice < 1 or choice > len(ids):
             rprint("wrong input")
+            logger.error("wrong input")
         else:
             project = projects[ids[choice-1]]
             break
@@ -543,6 +629,7 @@ def joined_project(username):
                 edit_task(tasks[taskss[choice -1]], project)
             else:
                 rprint("wrong input")
+                logger.error("wrong input")
 
         if choice == "3":
             break
@@ -564,6 +651,8 @@ def user_panel(username):
         if choice == "3":
             joined_project(username)
 
+
+
         if choice == "4":
             break
     
@@ -580,7 +669,37 @@ def save_data(filename='data.json'):
 logging.basicConfig(level=logging.DEBUG,  
     format='%(asctime)s - %(levelname)s - %(message)s',  
     filename='app.log', 
-    filemode='a')  
+    filemode='a') 
+
+logging.basicConfig(filename='loggerfile.log', level=logging.INFO)
+logger = logging.getLogger()
+
+file_handler = logging.FileHandler('loggerfile.log')
+logger.addHandler(file_handler)
+
+
+data = {'Task': ['Task 1', 'Task 2', 'Task 3', 'Task 4', 'Task 5'],
+        'Status': ['Completed', 'In Progress', 'Pending', 'Completed', 'Pending'],
+        'Priority': ['High', 'Medium', 'Low', 'High', 'Medium'],
+        'Due Date': ['2022-12-31', '2022-11-15', '2022-10-20', '2022-12-10', '2022-11-30'],
+        'Assigned To': ['Alice', 'Bob', 'Alice', 'Charlie', 'Bob']}
+
+df = pd.DataFrame(data)
+
+print(df)
+
+task_index = int(input("Enter the index of the task you want to view and modify: "))
+
+selected_task = df.iloc[task_index]
+print("\nSelected Task Details:")
+print(selected_task)
+
+
+new_status = input("Enter the new status for the task: ")
+df.at[task_index, 'Status'] = new_status
+
+print("\nUpdated Task Table:")
+print(df)
 
 def main():
     
@@ -599,7 +718,6 @@ def main():
                 user_panel(username)
             else:
                 rprint("Login failed. Please try again.")
-
         if choice == "3":
             break
             
